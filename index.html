@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📝 My Thoughts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: url('https://images.unsplash.com/photo-1508780709619-79562169bc64?auto=format&fit=crop&w=1350&q=80');
+      --box-color: rgba(255, 255, 255, 0.6);
+      --border-color: #ccc;
+      --text-color: #222;
+      --accent-color: #ff69b4;
+    }
+    body.dark {
+      --box-color: rgba(30, 30, 30, 0.6);
+      --border-color: #555;
+      --text-color: #f4f4f4;
+    }
+    body {
+      font-family: 'Open Sans', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-gradient) no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text-color);
+      transition: 0.3s;
+    }
+    header {
+      background: rgba(255,255,255,0.3);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-family: 'Great Vibes', cursive;
+      font-size: 2.5em;
+      color: var(--accent-color);
+    }
+    .clock {
+      font-size: 1.2em;
+    }
+    .theme-switcher {
+      margin: 0 10px;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+    }
+    .note-card {
+      background: var(--box-color);
+      border: 1px solid var(--border-color);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+    .note-card:hover {
+      transform: scale(1.01);
+    }
+    textarea, input[type="text"], select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 16px;
+      margin-top: 10px;
+      background: rgba(255,255,255,0.8);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      max-length: 2000;
+    }
+    .btn-group button {
+      margin: 10px 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: var(--accent-color);
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .btn-group button:hover {
+      background: #e0529e;
+    }
+    .quote {
+      text-align: center;
+      font-style: italic;
+      margin: 20px auto;
+      color: var(--accent-color);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📝 My Thoughts</h1>
+    <div>
+      <span class="clock" id="clock"></span>
+      <button class="theme-switcher" onclick="toggleTheme()">🌓</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="quote" id="quote">Loading motivational quote...</div>
+
+    <div class="note-card">
+      <input type="text" id="headline" placeholder="Headline...">
+      <select id="category">
+        <option value="Personal">Personal</option>
+        <option value="Work">Work</option>
+        <option value="Study">Study</option>
+      </select>
+      <textarea id="paragraph" maxlength="2000" placeholder="Write your thoughts..."></textarea>
+      <small><span id="charCount">0</span>/2000 characters</small><br>
+      <input type="file" id="imageUpload">
+      <div class="btn-group">
+        <button onclick="saveNote()">💾 Save</button>
+        <button onclick="previewNote()">👁️ Preview</button>
+        <button onclick="deleteNote()">🗑️ Delete</button>
+        <button onclick="exportJSON()">📥 Export JSON</button>
+        <button onclick="setReminder()">⏰ Set Reminder</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+      const date = now.toLocaleDateString();
+      document.getElementById("clock").innerText = `${date} | ${time}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+
+    const paragraph = document.getElementById("paragraph");
+    const charCount = document.getElementById("charCount");
+    paragraph.addEventListener("input", () => {
+      charCount.innerText = paragraph.value.length;
+    });
+
+    function saveNote() {
+      const note = {
+        headline: document.getElementById("headline").value,
+        category: document.getElementById("category").value,
+        content: document.getElementById("paragraph").value,
+        time: new Date().toLocaleString()
+      };
+      localStorage.setItem("my-note", JSON.stringify(note));
+      alert("Note saved!");
+    }
+
+    function previewNote() {
+      const data = JSON.parse(localStorage.getItem("my-note"));
+      alert(`Preview\n\nHeadline: ${data.headline}\nCategory: ${data.category}\nContent: ${data.content}`);
+    }
+
+    function deleteNote() {
+      localStorage.removeItem("my-note");
+      alert("Note deleted!");
+    }
+
+    function exportJSON() {
+      const data = localStorage.getItem("my-note");
+      const blob = new Blob([data], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "my_thoughts.json";
+      a.click();
+    }
+
+    function setReminder() {
+      const delay = prompt("Reminder in how many minutes?");
+      if (!delay || isNaN(delay)) return;
+      setTimeout(() => {
+        alert("⏰ Reminder: Check your saved notes!");
+      }, delay * 60000);
+    }
+
+    const quotes = [
+      "Believe in yourself!",
+      "Stay focused and never give up.",
+      "Your thoughts shape your reality.",
+      "You are capable of amazing things."
+    ];
+    document.getElementById("quote").innerText = quotes[Math.floor(Math.random() * quotes.length)];
+  </script>
+</body>
+</html>
