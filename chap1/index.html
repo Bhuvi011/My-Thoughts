@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📝 My Thoughts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Open+Sans&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    :root {
+      --bg: url('https://images.unsplash.com/photo-1508780709619-79562169bc64?auto=format&fit=crop&w=1350&q=80');
+      --box: rgba(255, 255, 255, 0.85);
+      --border: #ccc;
+      --accent: #ff69b4;
+      --text: #333;
+    }
+    body.dark {
+      --box: rgba(30,30,30,0.85);
+      --border: #555;
+      --text: #f0f0f0;
+    }
+    body {
+      margin: 0;
+      font-family: 'Open Sans', sans-serif;
+      background: var(--bg) no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text);
+      transition: 0.3s;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(10px);
+      padding: 15px 25px;
+    }
+    header h1 {
+      font-family: 'Great Vibes', cursive;
+      font-size: 2.5em;
+      color: var(--accent);
+    }
+    #auth-section {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .theme-switcher {
+      cursor: pointer;
+      font-size: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: var(--box);
+      border-radius: 15px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .btn-group {
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .btn-group button {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-group button i {
+      margin-right: 5px;
+    }
+    .quote {
+      text-align: center;
+      margin-top: 10px;
+      font-style: italic;
+      color: var(--accent);
+    }
+    #logoutBtn {
+      background: #ff4444;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📝 My Thoughts</h1>
+    <div id="auth-section">
+      <span id="clock"></span>
+      <i class="fas fa-moon theme-switcher" onclick="toggleTheme()"></i>
+      <button id="loginBtn">Login</button>
+      <button id="logoutBtn" style="display: none;">Logout</button>
+    </div>
+  </header>
+
+  <div class="container" id="editor" style="display:none;">
+    <div class="quote" id="quote">Loading quote...</div>
+    <input type="text" id="headline" placeholder="Headline..."/>
+    <select id="category">
+      <option>Personal</option>
+      <option>Work</option>
+      <option>Study</option>
+    </select>
+    <textarea id="content" maxlength="2000" placeholder="Write your thoughts..."></textarea>
+    <small><span id="charCount">0</span>/2000 characters</small>
+    <div class="btn-group">
+      <button onclick="saveNote()"><i class="fas fa-save"></i>Save</button>
+      <button onclick="previewNote()"><i class="fas fa-eye"></i>Preview</button>
+      <button onclick="deleteNote()"><i class="fas fa-trash"></i>Delete</button>
+    </div>
+  </div>
+
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase config (replace with your real Firebase keys)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const editor = document.getElementById('editor');
+
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    logoutBtn.onclick = () => auth.signOut();
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        editor.style.display = 'block';
+        loadNote(user.uid);
+      } else {
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        editor.style.display = 'none';
+      }
+    });
+
+    function saveNote() {
+      const user = auth.currentUser;
+      if (!user) return alert("Please login first.");
+      const note = {
+        headline: document.getElementById("headline").value,
+        category: document.getElementById("category").value,
+        content: document.getElementById("content").value,
+        time: new Date().toLocaleString()
+      };
+      db.collection("notes").doc(user.uid).set(note);
+      alert("Note saved to cloud!");
+    }
+
+    function loadNote(uid) {
+      db.collection("notes").doc(uid).get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById("headline").value = data.headline || '';
+          document.getElementById("category").value = data.category || '';
+          document.getElementById("content").value = data.content || '';
+          document.getElementById("charCount").innerText = data.content.length || 0;
+        }
+      });
+    }
+
+    function previewNote() {
+      alert(`Preview:\n${document.getElementById("headline").value}\n${document.getElementById("content").value}`);
+    }
+
+    function deleteNote() {
+      const user = auth.currentUser;
+      if (!user) return;
+      db.collection("notes").doc(user.uid).delete();
+      alert("Note deleted from cloud.");
+    }
+
+    // Clock & Theme
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").innerText = now.toLocaleString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+
+    document.getElementById("content").addEventListener("input", function() {
+      document.getElementById("charCount").innerText = this.value.length;
+    });
+
+    const quotes = [
+      "Believe in yourself!", "You can do this!", "Keep going!", "Great ideas start here!"
+    ];
+    document.getElementById("quote").innerText = quotes[Math.floor(Math.random() * quotes.length)];
+  </script>
+</body>
+</html>
